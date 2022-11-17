@@ -1,0 +1,407 @@
+---
+title: "Gradient Descent"
+output: html_notebook
+---
+
+The __gradient descent algorithm__ is an optimization technique that can be used to minimize objective function values. This algorithm can be used in machine learning for example to find the optimal beta coefficients that are minimizing the objective function of a linear regression.
+In this blog post, we are going over the gradient descent algorithm and some line search methods to minimize the objective function $x^2$. What we are going to cover in this post is:
+
++ The gradient descent algorithm with constant step length
++ Gradient descent and line search methods
++ Inexact line search methods and Wolfe conditions (line search method)
++ Backtracking line search (line search method)
++ Exact step length (line search method)
++ Does gradient descent always find the minimum of a function?
+
+# The Gradient Descent Algorithm
+
+The gradient descent method is an iterative optimization method that tries to minimize the value of an objective function. It is a popular technique in machine learning and neural networks. To get an intuition about gradient descent, we are minimizing $x^2$ by finding a value xx for which the function value is minimal.
+We do that by taking the derivative of the objective function, then decide on a descent direction that yields the steepest decrease in the function value. After that, we walk in that direction by deciding on an appropriate step length.
+Now, the four most important things we need to know for gradient descent are:
+
++ __The objective function (also sometimes called cost function)__
++ __The gradient of our objective function__
++ __A search direction__
++ __The step length (how far in that direction should we go?)__
+
+
+Let’s consider one simple example where we try to find the value x for which $x^2$ is minimized. The framework for the gradient descent algorithm looks like this:
+
+__Given__ $x_0$ (our initial guess),
+
+$p_0$ = -\nabla f( $x_0$ )__(search direction)__
+
+alpha = 0.05 __(alpha denotes our step length)__
+
+k = 0
+
+__while__ $||\nabla f(x_k) > 10^{-4} ||_2$ __(while the norm of the first derivative or gradient is smaller than some threshold)__
+
+$x_{k+1} = x_k + alpha * p_k$
+
+$p_{k} = -\nabla f(x_k)$
+
+k = k + 1k=k+1
+
+__end (while)__
+
+__If we put that in code, it would look like this:__
+
+```{r}
+# load library
+library(ggplot2)
+library(ggpubr)
+```
+
+
+```{r}
+# objective function
+fun <- function(x) {
+  x^2
+}
+
+# initialize iteration
+k <- 0
+
+# initial guess
+x <- 5
+
+# gradient of objective function at x
+grad <- 2 * x
+
+# initialize vector to hold all x
+points <- c()
+points[1] <- x
+
+# initialize counter
+i <- 2
+
+# start gradient descent algorithm
+while (norm(grad, "2") > 10^-4) {
+
+  # constant step length alpha
+  alpha <- 0.05
+
+  # gradient of objective function
+  grad <- 2 * x
+
+  # search direction
+  p <- -grad
+
+  # update x until objective funtion value is minimized
+  x <- x + alpha * p
+
+  # keep track of values of x
+  points[i] <- x
+
+  # iterations counter
+  k <- k + 1
+
+  # counter for x
+  i <- i + 1
+}
+
+# create data frame
+data_points <- data.frame(x = points, y = fun(points))
+
+# plot objective function with all x
+# small_step_length <- 
+  ggplot(data.frame(x = c(-5, 5)), aes(x)) +
+  stat_function(fun = fun) +
+  geom_line(data = data_points, aes(x = x, y = y), col = "blue") +
+  geom_point(data = data_points, aes(x = x, y = y), col = "red") +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab(expression(x^2)) +
+  ggtitle(bquote(atop("Gradient Descent for" ~ x^2, "With Step Length 0.05 and k = 111")))
+
+```
+
+
+```{r}
+
+# initialize iteration
+k <- 0
+
+# initial guess
+x <- 5
+
+# gradient of objective function at x
+grad <- 2 * x
+
+# initialize vector to hold all x
+points <- c()
+points[1] <- x
+
+# initialize counter
+i <- 2
+
+# start gradient descent algorithm
+while (norm(grad, "2") > 10^-4) {
+
+  # constant step length alpha
+  alpha <- 0.7
+
+  # gradient of objective function
+  grad <- 2 * x
+
+  # search direction
+  p <- -grad
+
+  # update x until objective funtion value is minimized
+  x <- x + alpha * p
+
+  # keep track of values of x
+  points[i] <- x
+
+  # iterations counter
+  k <- k + 1
+
+  # counter for x
+  i <- i + 1
+}
+
+# create data frame
+data_points <- data.frame(x = points, y = fun(points))
+
+#big_step_length <- 
+  ggplot(data.frame(x = c(-5, 5)), aes(x)) +
+  stat_function(fun = fun) +
+  geom_line(data = data_points, aes(x = x, y = y), col = "blue") +
+  geom_point(data = data_points, aes(x = x, y = y), col = "red") +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab(expression(x^2)) +
+  ggtitle(bquote(atop("Gradient Descent for" ~ x^2, "With Step Length 0.7 and k = 14")))
+
+#ggpubr::ggarrange(small_step_length, big_step_length, ncol = 2)
+```
+# Gradient Descent, Search Direction, and Step Length
+For the gradient descent algorithm, we chose a search direction from $x_k$ for which ff decreased most rapidly.
+As you can see from the graph above, it is also crucial for the gradient descent algorithm to choose an appropriate step length.
+In the left graph, we chose a very small constant step length of 0.05 which took the algorithm 111 iterations before converging. In comparison, for a constant step length of 0.7, the algorithm only took 14 iterations in order to converge.
+As you can see, guessing the step length and hoping for a fast convergence rate is not optimal. There are some other methods that can determine a good step size alpha.
+
+# Line Search Methods: Backtracking, Exact Step Length, and Wolfe Conditions
+When wanting to compute the step length, we are facing a tradeoff. We would like to choose the step length $\alpha_k$
+such that we get a sufficient decrease in the objective function value. However, at the same time, we do not want to spend too much time calculating $\alpha$.
+Sometimes we have specific problems with specific data sets for which it can be very computationally expensive to calculate a step length that satisfies a sufficient decrease in the function value. So, it can happen that the algorithm would converge with reasonable few iterations. However, computing the step length takes a lot of time and so that is not desirable.
+Inexact Line Search and Wolfe Conditions
+One very popular condition for which the step length ensures a sufficient decrease in the objective function value ff is the Armijo condition.
+
+$f(x_k + \alpha p_k) \leq f(x_k) + c_1 \alpha \nabla f(x_k)^Tp_k$
+
+What we also want is a condition that ensures that \alphaα is not too small. For the above condition, it could happen that even a very small step length can yield a large decrease in the objective function value ff. In order to avoid too small of a step length, we consider the following condition:
+
+$\nabla f(x_k + \alpha p_k)^T p_k \geq c_2 \nabla f(x_k)^Tp_k$
+
+where where $4c_2 \in (0, 1)$ 
+
+These two conditions are the so-called Wolfe conditions and are very popular line search methods.
+Now that we understand these two conditions, we can implement a very easy to code inexact line search method which is called backtracking.
+
+# Backtracking
+The backtracking algorithm only makes use of the first Wolfe condition, the Armijo condition. This algorithm chooses the candidate step lengths appropriately and therefore, we do not have to make use of the second Wolfe condition. The only condition we have to satisfy is the Armijo condition.
+
+The framework of the backtracking algorithm looks like this:
+
+__Choose__
+
+$\bar{\alpha} > 0 $
+
+$\rho \in (0, 1)$
+
+$c_1 \in (0, 1)$
+
+__Set__ $\alpha = \bar{\alpha}$
+
+__while__ 
+
+  $f(x_k + \alpha p_k) > f(x_k) + c_1 \alpha \nabla f(x_k)^Tp_k$
+  
+  $\alpha = \rho \alpha$
+
+__end (while)__
+
+__Let’s consider our previous example with the code implementation__
+
+
+```{r}
+# objective function
+fun <- function(x) {
+  x^2
+}
+
+# initialization of iterations
+k <- 0
+
+# initial guess
+x <- 5
+
+# gradient at point x
+grad <- 2 * x
+
+# search direction
+p <- -grad
+
+# initialize vector to hold all x
+points <- c()
+points[1] <- x
+
+# initialize counter
+i <- 2
+
+# set c for Armijo condition
+c <- 0.9
+
+# set roh for backtracking algorithm
+roh <- 0.95
+
+while (norm(grad, "2") > 10^-4) {
+
+  # set alpha to 1 every time we enter the while loop
+  # and cacluate the new alpha for each iteration
+  alpha <- 1
+
+  # Armijo condition in while loop
+  while (fun(x + alpha * p) > fun(x) + c * alpha * grad * p) {
+    alpha <- roh * alpha
+  }
+
+  grad <- 2 * x
+  p <- -grad
+  x <- x + alpha * p
+  points[i] <- x
+
+  # update iteration
+  k <- k + 1
+
+  # update counter
+  i <- i + 1
+}
+
+data_points <- data.frame(x = points, y = fun(points))
+
+ggplot(data.frame(x = c(-5, 5)), aes(x)) +
+  stat_function(fun = fun) +
+  geom_line(data = data_points, aes(x = x, y = y), col = "blue") +
+  geom_point(data = data_points, aes(x = x, y = y), col = "red") +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab(expression(x^2)) +
+  ggtitle(bquote(atop("Gradient Descent for" ~ x^2, "With Backtracking Line Search and k = 104")))
+```
+If we have no idea where to start with a guess about the step length, the line search backtracking algorithm chooses appropriate ones. Another advantage is that this algorithm is very easy to implement in code.
+
+
+# Exact Line Search
+
+
+Another line search method is the exact line search. We have to evaluate $f(x_k + \alpha p)$, take the derivative with respect to $\alpha$, set the equation to zero, and then solve for alpha. Let’s solve the first iteration for alpha and then compute alpha after every step with the help of R.
+$f(x_k + \alpha p_k) = (5 + \alpha * (-10))^2$
+
+$\frac{\partial f}{\partial \alpha} = 2 * (-10)(5 - 10\alpha) = 0$
+
+$\alpha = 0.5$
+
+
+```{r}
+# objective function
+fun <- function(x) {
+  x^2
+}
+
+# initialize iterations
+k <- 0
+
+# initial guess
+x <- 5
+
+# gradient at point x
+grad <- 2 * x
+
+# search direction
+p <- -grad
+
+points <- c()
+points[1] <- x
+i <- 2
+
+while (norm(grad, "2") > 10^-4) {
+
+  # solve for alpha
+  alpha <- solve(p, -x)
+
+  # gradient at x
+  grad <- 2 * x
+
+  # search direction
+  p <- -grad
+
+  # update x
+  x <- x + alpha * p
+
+  # all x
+  points[i] <- x
+
+  # iterations
+  k <- k + 1
+  i <- i + 1
+}
+
+data_points <- data.frame(x = points, y = fun(points))
+
+ggplot(data.frame(x = c(-5, 5)), aes(x)) +
+  stat_function(fun = fun) +
+  geom_line(data = data_points, aes(x = x, y = y), col = "blue") +
+  geom_point(data = data_points, aes(x = x, y = y), col = "red") +
+  theme_minimal() +
+  theme(
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 15),
+    plot.title = element_text(hjust = 0.5, size = 18)
+  ) +
+  ylab(expression(x^2)) +
+  ggtitle(bquote(atop("Gradient Descent for" ~ x^2, "With Exact Step Length and k = 2")))
+```
+
+Gradient descent with the exact step length only took us two iterations until it found the minimum. It performed best and had the fastest convergence rate among all the other line search methods. However, always be aware that for different problems with different data there is no best answer in choosing a line search method. Line search methods and different step lengths will always perform differently on different problems.
+
+Does Gradient Descent Always Find the Minimum of A Function?
+The answer is yes. However, we are differentiating between a local and a global minimum. When we have a complex function with a lot of local minima, then the function might be trapped in such a region. To illustrate that point, have a look at the function below. This function looks quite complicated. In red, we have all the local minima and in blue we have the global minimum.
+
+In mathematics, there are functions that are convex. If a function is convex, then any local minimizer is a global minimizer. In order for a function to be convex, it has to satisfy the following criteria:
+
+The second-order derivative (or the Hessian matrix) is a positive semidefinite.
+In mathematical notation, this would look like this:
+
+$\nabla^2 f(x) \succeq $
+
+With our example, we only have a scalar and so we do not need to use the word semidefinite which one usually uses when talking about matrices. Our example is very simple and only involves one variable. Hence, we only need to find out if the second derivative of our objective function is greater than or equal to zero. Let’s do that.
+
+$\nabla f(x) = 2x$
+
+$\nabla^2 f(x) = 2$ 
+
+$2 \geq 0$
+
+Hence, in our case, the objective function is strictly greater than zero, and therefore, the function is convex and the minimizer we found is a global minimizer.
+
+If you are interested in the application of gradient descent for linear regression and other machine learning optimization techniques, then you can check out these blog posts:
+
++ Gradient Descent and Line Search Methods for Linear Regression
++ Conjugate Gradient Descent for Linear Regression
++ Newton’s Method and Quasi-Newton’s Method (BFGS) for Linear Regression
+

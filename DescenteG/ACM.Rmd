@@ -1,0 +1,156 @@
+---
+title: "AFCM | ACM"
+output: html_notebook
+---
+
+# Position du problème 
+__Construire un nouveau système de représentation__ (facteurs, axes factoriels: combinaison lineaire des indicatrices des variables originelles) __qui permet de synthétiser l'information__
+
+## Extrait de données << Races canines >> (Tenenhaus, 2006; page 254).
+
+
+```{r}
+df <- data.frame(
+  Chien=c("Beauceron","Basset","Berger All","Boxer","Bull-Dog","Bull-Mastif","Caniche","Labrador"),
+  Taille=c("Taille++","Taille-","Taille++","Taille+","Taille-","Taille++","Taille-","Taille+"),
+  Velocite=c("Veloc++","Veloc-","Veloc++","Veloc+","Veloc-","Veloc-","Veloc+","Veloc+"),
+  Affection=c("Affec+","Affec-","Affec+","Affec+","Affec+","Affec-","Affec+","Affec+")
+  )
+df
+```
+
+___Variables « actives » qualitatives c.-à-d. sont utilisées pour la construction des facteurs___ $j : 1,  , p$ : Taille, Velocite, Affection
+
+$i:1,..,n$ individus actifs.
+
+__$\color{blue}{Questions}$__ :
+
+(1) Quelles sont les chiens qui se ressemblent ? (proximité entre les individus)
+
+(2) Sur quelles caractéristiques sont fondées les ressemblances / dissemblances
+
+(3) Quelles sont les relations entre les modalités (distance)
+
+(4) Quelles sont les relations entre les variables
+
+
+$\color{blue}{Tableau}$ $\color{blue}{de}$ $\color{blue}{données}$ $\color{blue}{–}$ $\color{blue}{Codage}$ $\color{blue}{disjonctif}$ $\color{blue}{complet}$
+
+Le caractère ordinal de certaines variables (si elles le sont) est ignoré.
+
+```{r}
+# Construction du Tableau disjontif complet
+for( elt in c("Taille","Velocite","Affection")){
+  for (item in unique(unlist(df[elt]))){
+    df <- cbind(
+      df, 
+      ifelse(
+        unlist(df[elt]) == item,
+        1,
+        0)
+      )
+    
+    names(df)[ncol(df)] = paste0(item,"")
+  }
+}
+```
+
+
+```{r}
+# suppression des variables actives qui sont remplacées par leur modalitées
+df <- df[colnames(df)[!colnames(df) %in% c("Taille","Velocite","Affection")]]
+df
+```
+
+
+
+```{r}
+# Somme colonnes
+S <- c("Somme")
+for( elt in colnames(df)[!colnames(df) %in% c("Chien")]){
+    x <- sum(as.numeric(unlist(df[elt])))
+    print(paste0(elt,x))
+    S <- c(S,as.numeric(x))
+
+}
+
+#df <- rbind(df,S)
+dim(df)
+length(S)
+mode(unlist(df["Chien"]))
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+df <- read.table("https://www.data.gouv.fr/fr/datasets/r/7ee5bc77-a91d-495a-9df1-ed1b1be15410", header=TRUE, sep=",")
+df
+```
+
+
+```{r}
+df <- data.frame(
+  Chien=c("Beauceron","Basset","Berger All","Boxer","Bull-Dog","Bull-Mastif","Caniche","Labrador"),
+  Taille=c("Taille++","Taille-","Taille++","Taille+","Taille-","Taille++","Taille-","Taille+"),
+  Velocite=c("Veloc++","Veloc-","Veloc++","Veloc+","Veloc-","Veloc-","Veloc+","Veloc+"),
+  Affection=c("Affec+","Affec-","Affec+","Affec+","Affec+","Affec-","Affec+","Affec+"),
+  row.names = 1
+  )
+df
+```
+
+```{r}
+library(FactoMineR)
+library(Factoshiny)
+
+res <- Factoshiny(df)
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
